@@ -1,0 +1,110 @@
+import json
+import os
+from datetime import datetime
+import openai  # Or use groq if preferred
+
+# Set your API key (e.g., os.environ['OPENAI_API_KEY'] = 'your-key')
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
+MEMORY_FILE = 'meeting_memory.json'
+
+def load_memory():
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_memory(memory):
+    with open(MEMORY_FILE, 'w') as f:
+        json.dump(memory, f, indent=4)
+
+def generate_summary(notes):
+    prompt = f"Summarize the following meeting notes concisely: {notes}"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # Or use Groq model
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=100
+    )
+    return response['choices'][0]['message']['content'].strip()
+
+def extract_tasks(notes):
+    prompt = f"Extract any pending tasks or follow-ups from these notes: {notes}"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=100
+    )
+    return response['choices'][0]['message']['content'].strip()
+
+def suggest_agenda(memory):
+    if not memory:
+        return "No past data. Start with introductions."
+    past_topics = [m['topic'] for m in memory[-3:]]  # Last 3 for learning
+    prompt = f"Based on past topics {past_topics}, suggest a meeting agenda."
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=150
+    )
+    return response['choices'][0]['message']['content'].strip()
+
+def add_meeting(memory):
+    topic = input("Enter meeting topic: ")
+    notes = input("Enter meeting notes: ")
+    
+    summary = generate_summary(notes)
+    tasks = extract_tasks(notes)
+    
+    meeting = {
+        "topic": topic,
+        "notes": notes,
+        "summary": summary,
+        "tasks": tasks,
+        "date": str(datetime.now())
+    }
+    
+    memory.append(meeting)
+    save_memory(memory)
+    print("✅ Meeting saved with AI summary!\n")
+    print(f"Summary: {summary}")
+    print(f"Tasks: {tasks}\n")
+
+def show_history(memory):
+    print("\n📜 Past Meetings:")
+    for i, m in enumerate(memory):
+        print(f"{i+1}. {m['topic']} - Summary: {m['summary']} - Tasks: {m['tasks']}")
+
+def suggest_next(memory):
+    agenda = suggest_agenda(memory)
+    print("\n💡 Suggested Agenda (improved over time):")
+    print(agenda)
+
+def check_reminders(memory):
+    print("\n🔔 Pending Tasks:")
+    for m in memory:
+        if m['tasks']:
+            print(f"- From {m['topic']}: {m['tasks']}")
+
+memory = load_memory()
+
+while True:
+    print("\n1. Add Meeting")
+    print("2. Show History")
+    print("3. Suggest Next Meeting")
+    print("4. Check Reminders")
+    print("5. Exit")
+    
+    choice = input("Enter choice: ")
+    
+    if choice == "1":
+        add_meeting(memory)
+    elif choice == "2":
+        show_history(memory)
+    elif choice == "3":
+        suggest_next(memory)
+    elif choice == "4":
+        check_reminders(memory)
+    elif choice == "5":
+        break
+    else:
+        print("Invalid choice")
