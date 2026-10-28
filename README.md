@@ -37,4 +37,4 @@ A minimal AI meeting preparation assistant that stores meeting history, summariz
 
 - The app stores memory in `meeting_memory.json`.
 - Use `OPENAI_MODEL` to switch models if desired.
-- The backend provides API routes for meetings, agenda suggestions, reminders, and learning summaries.
+- The backend provides API routes for meetings, agenda suggestions, reminders, and learning summaries..
